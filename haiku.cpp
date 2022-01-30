@@ -10,10 +10,11 @@
 
 
 class PuzzleView;
+class PuzzleWindow;
 
 
 struct frontend {
-	midend *midend;
+	midend *midEnd;
 
 	bool timer_active;
 	struct timeval last_time;
@@ -30,22 +31,14 @@ public:
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 
-	static PuzzleView* Self() {
-		if (sPuzzleView == NULL) {
-			sPuzzleView = new PuzzleView(BRect(0, 0, 100, 100));
-		}
+	static PuzzleView* Self();
 
-		return sPuzzleView;
-	}
-
-	static frontend* Frontend() {
-		return static_cast<PuzzleWindow*>(Self()->Window())->Frontend();
-	}
+	static frontend* Frontend();
 
 	static void		DrawText(void *view, int x, int y, int fonttype,
 						int fontsize, int align, int colour, const char *text);
 	static void		DrawRect(void *view, int x, int y, int w, int h, int colour);
-	static void		DrawLine(int x1, int y1, int x2, int y2, int colour);
+	static void		DrawLine(void *view, int x1, int y1, int x2, int y2, int colour);
 	static void		DrawPolygon(void *view, const int *coords, int npoints,
 						int fillcolour, int outlinecolour);
 	static void		DrawCircle(void *view, int cx, int cy, int radius, int fillcolour,
@@ -64,7 +57,6 @@ public:
 	// draw_thick_line
 private:
 	// controls here
-	static PuzzleView *sPuzzleView = NULL;
 };
 
 
@@ -164,6 +156,28 @@ PuzzleView::Pulse()
 
 // static member functions
 
+
+static PuzzleView *sPuzzleView = NULL;
+
+
+PuzzleView*
+PuzzleView::Self()
+{
+	if (sPuzzleView == NULL) {
+		sPuzzleView = new PuzzleView(BRect(0, 0, 450, 150));
+	}
+
+	return sPuzzleView;
+}
+
+
+frontend*
+PuzzleView::Frontend()
+{
+	return static_cast<PuzzleWindow*>(Self()->Window())->Frontend();
+}
+
+
 void
 PuzzleView::DrawText(void *handle, int x, int y, int fonttype, int fontsize,
 	int align, int colour, const char *text)
@@ -175,17 +189,17 @@ PuzzleView::DrawText(void *handle, int x, int y, int fonttype, int fontsize,
 void
 PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
 {
-	Self()->SetHighColor(
+	/*Self()->SetHighColor(
 		Frontend()->colours[3 * colour + 0],
 		Frontend()->colours[3 * colour + 1],
 		Frontend()->colours[3 * colour + 2]
-	);
+	);*/
 	Self()->FillRect(BRect(x, y, w, h));
 }
 
 
 void
-PuzzleView::DrawLine(int x1, int y1, int x2, int y2, int colour)
+PuzzleView::DrawLine(void *view, int x1, int y1, int x2, int y2, int colour)
 {
 
 }
@@ -289,7 +303,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 		B_ASYNCHRONOUS_CONTROLS,
 		B_ALL_WORKSPACES)
 {
-	PuzzleView *v = new PuzzleView(Bounds());
+	PuzzleView *v = PuzzleView::Self();
 	AddChild(v);
 
 	// we don't need to pulse unless a timer is requested
@@ -298,7 +312,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	fFrontEnd = snew(frontend);
 	memset(fFrontEnd, 0, sizeof(frontend));
 
-	fFrontEnd->midend = midend_new(fFrontEnd, &thegame, &haiku_drawing, fFrontEnd);
+	fFrontEnd->midEnd = midend_new(fFrontEnd, &thegame, &haiku_drawing, fFrontEnd);
 }
 
 
