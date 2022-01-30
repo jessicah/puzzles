@@ -10,6 +10,10 @@
 #include <limits.h> /* for UINT_MAX */
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PI 3.141592653589793238462643383279502884197169399
 #define ROOT2 1.414213562373095048801688724209698078569672
 
@@ -752,5 +756,9 @@ extern char UI_UPDATE[];
 
 /* A little bit of help to lazy developers */
 #define DEFAULT_STATUSBAR_TEXT "Use status_bar() to fill this in."
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* PUZZLES_PUZZLES_H */
