@@ -26,9 +26,42 @@ public:
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 
+	static void		DrawText(PuzzleView *view, int x, int y, int fonttype,
+						int fontsize, int align, int colour, const char *text);
+	static void		DrawRect(PuzzleView *view, int x, int y, int w, int h, int colour);
+
 private:
 	// controls here
+	static PuzzleView* fPuzzle;
 };
+
+
+const struct drawing_api haiku_drawing = {
+    PuzzleView::DrawText,
+    PuzzleView::DrawRect,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+	// printing
+    NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
+    NULL, NULL,			       /* line_width, line_dotted */
+    NULL,
+    NULL,
+};
+
+
+// PuzzleWindow
+
 
 class PuzzleWindow : public BWindow {
 public:
