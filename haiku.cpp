@@ -4,6 +4,12 @@
 #include <View.h>
 #include <Window.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "puzzles.h"
+
+
 class PuzzleView : public BView {
 public:
 			PuzzleView(BRect frame);
@@ -83,7 +89,7 @@ PuzzleView::Pulse()
 
 
 PuzzleWindow::PuzzleWindow(BRect frame)
-	: BWindow(frame, B_TRANSLATE("Portable Puzzle Collection"),
+	: BWindow(frame, "Portable Puzzle Collection",
 		B_TITLED_WINDOW_LOOK, 
 		B_NORMAL_WINDOW_FEEL, 
 		//B_NOT_MOVABLE | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | 
@@ -122,8 +128,8 @@ PuzzleApp::ReadyToRun()
 {
 	float sizeDelta = (float)be_plain_font->Size()/12.0f;
 	BRect frame(0, 0, 450 * sizeDelta, 150 * sizeDelta);
-	frame.OffsetBySelf(screen.Frame().Width()/2 - frame.Width()/2,
-		screen.Frame().Height()/2 - frame.Height()/2);
+	// frame.OffsetBySelf(screen.Frame().Width()/2 - frame.Width()/2,
+	// 	screen.Frame().Height()/2 - frame.Height()/2);
 	fPuzzleWindow = new PuzzleWindow(frame);
 	fPuzzleWindow->Show();
 }
@@ -142,6 +148,73 @@ PuzzleApp::MessageReceived(BMessage *message)
 // global functions
 
 
+void fatal(const char *fmt, ...)
+{
+    va_list ap;
+
+    fprintf(stderr, "fatal error: ");
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+
+    fprintf(stderr, "\n");
+    exit(1);
+}
+
+
+void get_random_seed(void **randseed, int *randseedsize)
+{
+    struct timeval *tvp = snew(struct timeval);
+    gettimeofday(tvp, NULL);
+    *randseed = (void *)tvp;
+    *randseedsize = sizeof(struct timeval);
+}
+
+
+void activate_timer(frontend *fe)
+{
+    if (!fe)
+		return;			       /* can happen due to --generate */
+    
+	if (!fe->timer_active) {
+        //fe->timer_id = g_timeout_add(20, timer_func, fe);
+		gettimeofday(&fe->last_time, NULL);
+    }
+
+    fe->timer_active = true;
+}
+
+
+void deactivate_timer(frontend *fe)
+{
+    if (!fe)
+		return;			       /* can happen due to --generate */
+
+    if (fe->timer_active)
+        ;//g_source_remove(fe->timer_id);
+
+    fe->timer_active = false;
+}
+
+
+/*
+ * Since this front end does not support printing (yet), we need
+ * this stub to satisfy the reference in midend_print_puzzle().
+ */
+void document_add_puzzle(document *doc, const game *game, game_params *par,
+		game_state *st, game_state *st2)
+{
+}
+
+
+void frontend_default_colour(frontend *fe, float *output)
+{
+	output[0] = output[1] = output[2] = 0.9F;
+}
+
+
+extern "C"
 int main(int, char **)
 {
 	PuzzleApp app;

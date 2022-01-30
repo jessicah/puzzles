@@ -8,13 +8,8 @@ in a crowded bin directory, e.g. \"sgt-\"")
 find_package(PkgConfig REQUIRED)
 
 set(platform_common_sources haiku.cpp)
-set(build_icons TRUE)
-if(CMAKE_CROSSCOMPILING)
-  # The puzzle icons are built by compiling and running a preliminary
-  # set of puzzle binaries. We can't do that if the binaries won't run
-  # on the build host.
-  set(build_icons FALSE)
-endif()
+set(platform_libs -lbe)
+set(build_icons FALSE)
 
 if(STRICT AND (CMAKE_C_COMPILER_ID MATCHES "GNU" OR
                CMAKE_C_COMPILER_ID MATCHES "Clang"))

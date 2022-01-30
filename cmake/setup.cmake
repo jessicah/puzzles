@@ -22,7 +22,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "NestedVM")
   include(cmake/platforms/nestedvm.cmake)
 elseif(CMAKE_C_COMPILER MATCHES "emcc")
   include(cmake/platforms/emscripten.cmake)
-elseif(CMAKE_SYSTEM_ANEM MATCHES "Haiku")
+elseif(CMAKE_SYSTEM_NAME MATCHES "Haiku")
   include(cmake/platforms/haiku.cmake)
 else() # assume Unix
   include(cmake/platforms/unix.cmake)
