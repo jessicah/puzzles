@@ -1,6 +1,5 @@
 #include <Application.h>
 #include <Rect.h>
-#include <Screen.h>
 #include <View.h>
 #include <Window.h>
 
@@ -8,6 +7,14 @@
 #include <stdlib.h>
 
 #include "puzzles.h"
+
+
+struct frontend {
+	midend *me;
+
+	bool timer_active;
+	struct timeval last_time;
+};
 
 
 class PuzzleView : public BView {
