@@ -194,6 +194,7 @@ PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
 		Frontend()->colours[3 * colour + 1],
 		Frontend()->colours[3 * colour + 2]
 	);*/
+	Self()->SetHighColor(1., 0., 0.);
 	Self()->FillRect(BRect(x, y, w, h));
 }
 
@@ -201,7 +202,8 @@ PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
 void
 PuzzleView::DrawLine(void *view, int x1, int y1, int x2, int y2, int colour)
 {
-
+	Self()->SetHighColor(0., 1., 0.);
+	Self()->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
 }
 
 void
