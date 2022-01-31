@@ -321,12 +321,13 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	colours = midend_colours(fFrontEnd->midEnd, &numColours);
 
 	int x, y;
+	x = 1000; y = 1000;
 	midend_size(fFrontEnd->midEnd, &x, &y, false);
 
 	ResizeTo(x, y);
 	CenterOnScreen();
 
-	midend_redraw(fFrontEnd->midEnd);
+	midend_force_redraw(fFrontEnd->midEnd);
 }
 
 
