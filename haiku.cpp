@@ -12,10 +12,6 @@
 class PuzzleView;
 class PuzzleWindow;
 
-
-
-
-
 class PuzzleView : public BView {
 public:
 			PuzzleView(BRect frame);
@@ -25,53 +21,8 @@ public:
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
-
-	static void		DrawText(void *view, int x, int y, int fonttype,
-						int fontsize, int align, int colour, const char *text);
-	static void		DrawRect(void *view, int x, int y, int w, int h, int colour);
-	static void		DrawLine(void *view, int x1, int y1, int x2, int y2, int colour);
-	static void		DrawPolygon(void *view, const int *coords, int npoints,
-						int fillcolour, int outlinecolour);
-	static void		DrawCircle(void *view, int cx, int cy, int radius, int fillcolour,
-						int outlinecolour);
-	static void		DrawUpdate(void *view, int x, int y, int w, int h);
-	static void		Clip(void *view, int x, int y, int w, int h);
-	static void		Unclip(void *view);
-	static void		StartDraw(void *view);
-	static void		EndDraw(void *view);
-	static void		StatusBar(void *view, const char *text);
-	static blitter* BlitterNew(void *view, int w, int h);
-	static void		BlitterFree(void *view, blitter *bl);
-	static void		BlitterSave(void *view, blitter *bl, int x, int y);
-	static void		BlitterLoad(void *view, blitter *bl, int x, int y);
-	// text_fallback
-	// draw_thick_line
 private:
 	// controls here
-};
-
-
-const struct drawing_api haiku_drawing = {
-    PuzzleView::DrawText,
-    PuzzleView::DrawRect,
-    PuzzleView::DrawLine,
-    PuzzleView::DrawPolygon,
-    PuzzleView::DrawCircle,
-    PuzzleView::DrawUpdate,
-    PuzzleView::Clip,
-    PuzzleView::Unclip,
-    PuzzleView::StartDraw,
-    PuzzleView::EndDraw,
-    PuzzleView::StatusBar,
-    NULL,//PuzzleView::BlitterNew,
-    NULL,//PuzzleView::BlitterFree,
-    NULL,//PuzzleView::BlitterSave,
-    NULL,//PuzzleView::BlitterLoad,
-	// printing
-    NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
-    NULL, NULL,			       /* line_width, line_dotted */
-    NULL,
-    NULL,
 };
 
 
@@ -86,6 +37,7 @@ public:
 private:
 };
 
+
 class PuzzleApp : public BApplication {
 public:
 			PuzzleApp();
@@ -98,7 +50,9 @@ private:
 	PuzzleWindow*	fPuzzleWindow;
 };
 
+
 // PuzzleView
+
 
 PuzzleView::PuzzleView(BRect frame)
 	: BView(frame, "PuzzleView", B_FOLLOW_ALL, B_PULSE_NEEDED | B_WILL_DRAW)
@@ -115,7 +69,6 @@ PuzzleView::~PuzzleView()
 void
 PuzzleView::AttachedToWindow()
 {
-	
 }
 
 
@@ -143,121 +96,6 @@ PuzzleView::Pulse()
 }
 
 
-// static member functions
-
-
-void
-PuzzleView::DrawText(void *handle, int x, int y, int fonttype, int fontsize,
-	int align, int colour, const char *text)
-{
-	
-}
-
-
-void
-PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
-{
-	
-}
-
-
-void
-PuzzleView::DrawLine(void *view, int x1, int y1, int x2, int y2, int colour)
-{
-	//Self()->SetHighColor(0, 255, 0);
-	//Self()->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
-}
-
-void
-PuzzleView::DrawPolygon(void *view, const int *coords, int npoints,
-	int fillcolour, int outlinecolour)
-{
-
-}
-	
-void
-PuzzleView::DrawCircle(void *view, int cx, int cy, int radius, int fillcolour,
-	int outlinecolour)
-{
-
-}
-
-
-void
-PuzzleView::DrawUpdate(void *view, int x, int y, int w, int h)
-{
-
-}
-
-
-void
-PuzzleView::Clip(void *view, int x, int y, int w, int h)
-{
-
-}
-
-
-void
-PuzzleView::Unclip(void *view)
-{
-
-}
-
-
-void
-PuzzleView::StartDraw(void *view)
-{
-
-}
-
-
-void
-PuzzleView::EndDraw(void *view)
-{
-
-}
-
-
-void
-PuzzleView::StatusBar(void *view, const char *text)
-{
-
-}
-
-
-blitter*
-PuzzleView::BlitterNew(void *view, int w, int h)
-{
-	return NULL;
-}
-
-
-void
-PuzzleView::BlitterFree(void *view, blitter *bl)
-{
-
-}
-
-
-void
-PuzzleView::BlitterSave(void *view, blitter *bl, int x, int y)
-{
-
-}
-
-
-void
-PuzzleView::BlitterLoad(void *view, blitter *bl, int x, int y)
-{
-
-}
-
-
-
-
-
-
-
 // PuzzleApp
 
 
@@ -278,8 +116,6 @@ PuzzleApp::ReadyToRun()
 {
 	float sizeDelta = (float)be_plain_font->Size()/12.0f;
 	BRect frame(0, 0, 450 * sizeDelta, 150 * sizeDelta);
-	// frame.OffsetBySelf(screen.Frame().Width()/2 - frame.Width()/2,
-	// 	screen.Frame().Height()/2 - frame.Height()/2);
 	fPuzzleWindow = new PuzzleWindow(frame);
 	fPuzzleWindow->Show();
 }
@@ -307,7 +143,13 @@ struct frontend : drawing_api {
 	PuzzleView *view;
 
 	rgb_color *colours;
+
+	const rgb_color& get_colour(int index)
+	{
+		return colours[index];
+	}
 };
+
 
 struct frontend haiku_api {
 	[](void *self, int x, int y, int fontType,
@@ -315,10 +157,9 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		rgb_color fore;
-		fore.set_to(16, 16, 16);
-		frontEnd->view->SetHighColor(fore);
+		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
 
+		// could probably calculate this once
 		BFont font(be_plain_font);
 		int textWidth = font.StringWidth(text);
 		font_height fontHeight;
@@ -348,24 +189,8 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		/*Self()->SetHighColor(
-			Frontend()->colours[3 * colour + 0],
-			Frontend()->colours[3 * colour + 1],
-			Frontend()->colours[3 * colour + 2]
-		);*/
-		rgb_color fore;
-		fore.set_to(0, 255, 0);
-		switch (colour) {
-			case 1: fore.set_to(0, 0, 0); break;
-			case 8: fore.set_to(64, 127, 88); break;
-			case 7: fore.set_to(127, 88, 64); break;
-			case 32: fore.set_to(255, 255, 255); break;
-			case 31: fore.set_to(222, 222, 222); break;
-			case 20: fore.set_to(0, 0, 200); break;
-			default: fore.set_to(0, 255, 255); break;
-		}
-		frontEnd->view->SetHighColor(fore);
-		frontEnd->view->MovePenTo(0., 0.);
+		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
+		//frontEnd->view->MovePenTo(0., 0.);
 		frontEnd->view->FillRect(BRect(x, y, x+w, y+h));
 	},
 
@@ -373,7 +198,7 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->SetHighColor(0, 255, 0);
+		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
 		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
 	},
 
@@ -463,6 +288,13 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	float *colours;
 
 	colours = midend_colours(haiku_api.midEnd, &numColours);
+	haiku_api.colours = snewn(rgb_color, numColours);
+	for (int i = 0; i < numColours; ++i)
+	{
+		haiku_api.colours[i].red   = 255 / colours[i * 3 + 0];
+		haiku_api.colours[i].green = 255 / colours[i * 3 + 1];
+		haiku_api.colours[i].blue  = 255 / colours[i * 3 + 2];
+	}
 
 	int x, y;
 	x = 1000; y = 1000;
