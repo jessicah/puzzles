@@ -313,7 +313,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	memset(fFrontEnd, 0, sizeof(frontend));
 
 	fFrontEnd->midEnd = midend_new(fFrontEnd, &thegame, &haiku_drawing, fFrontEnd);
-	midend_new_game(me);
+	midend_new_game(fFrontEnd->midEnd);
 
 	int numColours;
 	float *colours;
