@@ -30,6 +30,7 @@ public:
 	void	AttachedToWindow();
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
+	void	Draw(BRect updateRect);
 
 	static PuzzleView* Self();
 
@@ -113,7 +114,7 @@ private:
 // PuzzleView
 
 PuzzleView::PuzzleView(BRect frame)
-	: BView(frame, "PuzzleView", B_FOLLOW_ALL, B_PULSE_NEEDED)
+	: BView(frame, "PuzzleView", B_FOLLOW_ALL, B_PULSE_NEEDED | B_WILL_DRAW)
 {
 	SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
 	SetLowUIColor(ViewUIColor());
@@ -127,6 +128,7 @@ PuzzleView::~PuzzleView()
 void
 PuzzleView::AttachedToWindow()
 {
+	
 }
 
 
@@ -151,6 +153,13 @@ PuzzleView::Pulse()
 	info << asctime(t);
 	info.RemoveSet("\r\n");
 	//fInfoView->SetText(info.String());
+}
+
+
+void
+PuzzleView::Draw()
+{
+	midend_force_redraw(Frontend()->midEnd);
 }
 
 
@@ -328,8 +337,6 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 
 	ResizeTo(x, y);
 	CenterOnScreen();
-
-	midend_force_redraw(fFrontEnd->midEnd);
 }
 
 
