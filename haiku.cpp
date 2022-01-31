@@ -314,6 +314,19 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 
 	fFrontEnd->midEnd = midend_new(fFrontEnd, &thegame, &haiku_drawing, fFrontEnd);
 	midend_new_game(me);
+
+	int numColours;
+	float *colours;
+
+	colours = midend_colours(fFrontEnd->midEnd, &numColours);
+
+	int x, y;
+	midend_size(fFrontEnd->midEnd, &x, &y, false);
+
+	ResizeTo(x, y);
+	CenterOnScreen();
+
+	midend_redraw(fFrontEnd->midEnd);
 }
 
 
