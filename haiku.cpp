@@ -220,14 +220,20 @@ struct frontend haiku_api {
 
 	},
 
+	// clip
 	[](void *self, int x, int y, int w, int h)
 	{
+		frontend *frontEnd = static_cast<frontend*>(self);
 
+		frontEnd->view->ClipToRect(BRect(x, y, w+x, h+y));
 	},
 
+	// unclip
 	[](void *self)
 	{
+		frontend *frontEnd = static_cast<frontend*>(self);
 
+		frontEnd->view->ConstrainClippingRegion(NULL);
 	},
 
 	[](void *self)
@@ -303,13 +309,6 @@ PuzzleView::MouseUp(BPoint point)
 		translatedButton |= RIGHT_RELEASE;
 	
 	midend_process_key(haiku_api.midEnd, point.x, point.y, translatedButton);
-}
-
-
-void
-PuzzleView::MouseUp(BPoint point)
-{
-
 }
 
 
