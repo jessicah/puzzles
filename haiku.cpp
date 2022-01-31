@@ -191,7 +191,33 @@ void
 PuzzleView::DrawText(void *handle, int x, int y, int fonttype, int fontsize,
 	int align, int colour, const char *text)
 {
+	rgb_color fore;
+	fore.set_to(16, 16, 16);
+	Self()->SetHighColor(fore);
 
+	BFont font(be_plain_font);
+	int textWidth = font.StringWidth(text);
+	font_height fontHeight;
+	font.GetHeight(&fontHeight);
+
+	BPoint startPoint(x, y);
+
+	if (align & ALIGN_VCENTRE)
+	{
+		// offset y, so that it's middle of capitalised text
+		startPoint.y -= fontHeight.ascent / 2;
+	}
+
+	if (align & ALIGN_HRIGHT)
+	{
+		startPoint.x -= textWidth;
+	}
+	else if (align & ALIGN_HCENTRE)
+	{
+		startPoint.x -= textWidth / 2;
+	}
+
+	Self()->DrawString(text, startPoint);
 }
 
 
