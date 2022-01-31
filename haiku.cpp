@@ -73,10 +73,10 @@ const struct drawing_api haiku_drawing = {
     PuzzleView::StartDraw,
     PuzzleView::EndDraw,
     PuzzleView::StatusBar,
-    PuzzleView::BlitterNew,
-    PuzzleView::BlitterFree,
-    PuzzleView::BlitterSave,
-    PuzzleView::BlitterLoad,
+    NULL,//PuzzleView::BlitterNew,
+    NULL,//PuzzleView::BlitterFree,
+    NULL,//PuzzleView::BlitterSave,
+    NULL,//PuzzleView::BlitterLoad,
 	// printing
     NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
     NULL, NULL,			       /* line_width, line_dotted */
@@ -157,7 +157,7 @@ PuzzleView::Pulse()
 
 
 void
-PuzzleView::Draw()
+PuzzleView::Draw(BRect updateRect)
 {
 	midend_force_redraw(Frontend()->midEnd);
 }
@@ -203,16 +203,30 @@ PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
 		Frontend()->colours[3 * colour + 1],
 		Frontend()->colours[3 * colour + 2]
 	);*/
-	Self()->SetHighColor(1., 0., 0.);
-	Self()->FillRect(BRect(x, y, w, h));
+	printf("draw rect: %d, %d, %d, %d: %d\n", x, y, w, h, colour);
+	rgb_color fore;
+	fore.set_to(0, 255, 0);
+	switch (colour) {
+		case 1: fore.set_to(0, 0, 0); break;
+		case 8: fore.set_to(64, 127, 88); break;
+		case 7: fore.set_to(127, 88, 64); break;
+		case 32: fore.set_to(255, 255, 255); break;
+		case 31: fore.set_to(222, 222, 222); break;
+		case 20: fore.set_to(0, 0, 200); break;
+		default: fore.set_to(0, 255, 255); break;
+	}
+	//fore.set_to(1 * colour, 5 * colour, 10 * colour);
+	Self()->SetHighColor(fore);
+	Self()->MovePenTo(0., 0.);
+	Self()->FillRect(BRect(x, y, x+w, y+h));
 }
 
 
 void
 PuzzleView::DrawLine(void *view, int x1, int y1, int x2, int y2, int colour)
 {
-	Self()->SetHighColor(0., 1., 0.);
-	Self()->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
+	Self()->SetHighColor(0, 255, 0);
+	//Self()->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
 }
 
 void
