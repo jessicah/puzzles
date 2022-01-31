@@ -21,6 +21,8 @@ public:
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
+	void	MouseDown(BPoint point);
+	void	MouseUp(BPoint point);
 private:
 	// controls here
 };
@@ -259,6 +261,55 @@ void
 PuzzleView::Draw(BRect updateRect)
 {
 	midend_force_redraw(haiku_api.midEnd);
+}
+
+
+void
+PuzzleView::MouseDown(BPoint point)
+{
+	int32 buttons = 0;
+	if (Window() != NULL && Window()->CurrentMessage() != NULL) {
+		Window()->CurrentMessage()->FindInt32("buttons", &buttons);
+	}
+
+	if (buttons == 0)
+		return;
+
+	int translatedButton = 0;
+	if (buttons & B_PRIMARY_MOUSE_BUTTON)
+		translatedButton |= LEFT_BUTTON;
+	if (buttons & B_SECONDARY_MOUSE_BUTTON)
+		translatedButton |= RIGHT_BUTTON;
+	
+	midend_process_key(haiku_api.midEnd, point.x, point.y, translatedButton);
+}
+
+
+void
+PuzzleView::MouseUp(BPoint point)
+{
+	int32 buttons = 0;
+	if (Window() != NULL && Window()->CurrentMessage() != NULL) {
+		Window()->CurrentMessage()->FindInt32("buttons", &buttons);
+	}
+
+	if (buttons == 0)
+		return;
+
+	int translatedButton = 0;
+	if (buttons & B_PRIMARY_MOUSE_BUTTON)
+		translatedButton |= LEFT_RELEASE;
+	if (buttons & B_SECONDARY_MOUSE_BUTTON)
+		translatedButton |= RIGHT_RELEASE;
+	
+	midend_process_key(haiku_api.midEnd, point.x, point.y, translatedButton);
+}
+
+
+void
+PuzzleView::MouseUp(BPoint point)
+{
+
 }
 
 
