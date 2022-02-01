@@ -154,6 +154,7 @@ struct frontend : drawing_api {
 
 
 struct frontend haiku_api {
+	// draw_text
 	[](void *self, int x, int y, int fontType,
 		int fontSize, int align, int colour, const char *text)
 	{
@@ -187,34 +188,39 @@ struct frontend haiku_api {
 		frontEnd->view->DrawString(text, startPoint);
 	},
 
+	// draw_rect
 	[](void *self, int x, int y, int w, int h, int colour)
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
 		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
-		//frontEnd->view->MovePenTo(0., 0.);
-		frontEnd->view->FillRect(BRect(x, y, x+w, y+h));
+		frontEnd->view->FillRect(BRect(x, y, x+w-1, y+h-1));
 	},
 
+	// draw_line
 	[](void *self, int x1, int y1, int x2, int y2, int colour)
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
 		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
 		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
+		//printf("draw line: (%d,%d) => (%d,%d)\n", x1, y1, x2, y2);
 	},
 
+	// draw_polygon
 	[](void *self, const int *coords, int numPoints,
 			int fillColour, int strokeColour)
 	{
 
 	},
 
+	// draw_circle
 	[](void *self, int cx, int cy, int radius,
 			int fillColour, int strokeColour)
 	{
 	},
 
+	// draw_update
 	[](void *self, int x, int y, int w, int h)
 	{
 
@@ -236,16 +242,19 @@ struct frontend haiku_api {
 		frontEnd->view->ConstrainClippingRegion(NULL);
 	},
 
+	// start_draw
 	[](void *self)
 	{
 
 	},
 
+	// end_draw
 	[](void *self)
 	{
 
 	},
 
+	// status_bar
 	[](void *self, const char *text)
 	{
 
