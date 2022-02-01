@@ -288,12 +288,12 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	float *colours;
 
 	colours = midend_colours(haiku_api.midEnd, &numColours);
-	haiku_api.colours = snewn(rgb_color, numColours);
+	haiku_api.colours = new rgb_color[numColours];
 	for (int i = 0; i < numColours; ++i)
 	{
-		haiku_api.colours[i].red   = 255 / colours[i * 3 + 0];
-		haiku_api.colours[i].green = 255 / colours[i * 3 + 1];
-		haiku_api.colours[i].blue  = 255 / colours[i * 3 + 2];
+		haiku_api.colours[i].red   = 255 * colours[i * 3 + 0];
+		haiku_api.colours[i].green = 255 * colours[i * 3 + 1];
+		haiku_api.colours[i].blue  = 255 * colours[i * 3 + 2];
 	}
 
 	int x, y;
