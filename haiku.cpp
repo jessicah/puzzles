@@ -13,153 +13,18 @@ class PuzzleView;
 class PuzzleWindow;
 
 
-struct frontend : drawing_api {
-	midend *midEnd;
 
-	bool timer_active;
-	struct timeval last_time;
-
-	PuzzleView *view;
-
-	rgb_color *colours;
-};
-
-const struct frontend haiku_api {
-	void draw_text(void *self, int x, int y, int fontType,
-		int fontSize, int align, int colour, const char *text)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
-
-		rgb_color fore;
-		fore.set_to(16, 16, 16);
-		frontEnd->view->SetHighColor(fore);
-
-		BFont font(be_plain_font);
-		int textWidth = font.StringWidth(text);
-		font_height fontHeight;
-		font.GetHeight(&fontHeight);
-
-		BPoint startPoint(x, y);
-
-		if (align & ALIGN_VCENTRE)
-		{
-			// offset y, so that it's middle of capitalised text
-			startPoint.y -= fontHeight.ascent / 2;
-		}
-
-		if (align & ALIGN_HRIGHT)
-		{
-			startPoint.x -= textWidth;
-		}
-		else if (align & ALIGN_HCENTRE)
-		{
-			startPoint.x -= textWidth / 2;
-		}
-
-		frontEnd->view->DrawString(text, startPoint);
-	},
-
-	void draw_rect(void *self, int x, int y, int w, int h, int colour)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
-
-		/*Self()->SetHighColor(
-			Frontend()->colours[3 * colour + 0],
-			Frontend()->colours[3 * colour + 1],
-			Frontend()->colours[3 * colour + 2]
-		);*/
-		printf("draw rect: %d, %d, %d, %d: %d\n", x, y, w, h, colour);
-		rgb_color fore;
-		fore.set_to(0, 255, 0);
-		switch (colour) {
-			case 1: fore.set_to(0, 0, 0); break;
-			case 8: fore.set_to(64, 127, 88); break;
-			case 7: fore.set_to(127, 88, 64); break;
-			case 32: fore.set_to(255, 255, 255); break;
-			case 31: fore.set_to(222, 222, 222); break;
-			case 20: fore.set_to(0, 0, 200); break;
-			default: fore.set_to(0, 255, 255); break;
-		}
-		frontEnd->view->SetHighColor(fore);
-		frontEnd->view->MovePenTo(0., 0.);
-		frontEnd->view->FillRect(BRect(x, y, x+w, y+h));
-	},
-
-	void draw_line(void *self, int x1, int y1, int x2, int y2, int colour)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
-
-		frontEnd->view->SetHighColor(0, 255, 0);
-		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
-	},
-
-	void draw_polygon(void *self, const int *coords, int numPoints,
-			int fillColour, int strokeColour)
-	{
-
-	},
-
-	void draw_circle(void *self, int cx, int cy, int radius,
-			int fillColour, int strokeColour)
-	{
-	},
-
-	void draw_update(void *self, int x, int y, int w, int h)
-	{
-
-	},
-
-	void clip(void *self, int x, int y, int w, int h)
-	{
-
-	},
-
-	void unclip(void *self)
-	{
-
-	},
-
-	void start_draw(void *self)
-	{
-
-	},
-
-	void end_draw(void *self)
-	{
-
-	},
-
-	void status_bar(void *self, const char *text)
-	{
-
-	},
-
-	NULL, // blitter_new
-	NULL, // blitter_free
-	NULL, // blitter_save
-	NULL, // blitter_load
-	// printing
-    NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
-    NULL, NULL,			       /* line_width, line_dotted */
-    NULL,
-    NULL,
-};
 
 
 class PuzzleView : public BView {
-private:
-			PuzzleView(BRect frame);
 public:
+			PuzzleView(BRect frame);
 	virtual	~PuzzleView();
 
 	void	AttachedToWindow();
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
-
-	static PuzzleView* Self();
-
-	static frontend* Frontend();
 
 	static void		DrawText(void *view, int x, int y, int fonttype,
 						int fontsize, int align, int colour, const char *text);
@@ -218,10 +83,7 @@ public:
 			PuzzleWindow(BRect frame);
 	virtual	~PuzzleWindow();
 
-	frontend *Frontend() const { return fFrontEnd; }
-
 private:
-	frontend *fFrontEnd;
 };
 
 class PuzzleApp : public BApplication {
@@ -281,35 +143,7 @@ PuzzleView::Pulse()
 }
 
 
-void
-PuzzleView::Draw(BRect updateRect)
-{
-	midend_force_redraw(Frontend()->midEnd);
-}
-
-
 // static member functions
-
-
-static PuzzleView *sPuzzleView = NULL;
-
-
-PuzzleView*
-PuzzleView::Self()
-{
-	if (sPuzzleView == NULL) {
-		sPuzzleView = new PuzzleView(BRect(0, 0, 450, 150));
-	}
-
-	return sPuzzleView;
-}
-
-
-frontend*
-PuzzleView::Frontend()
-{
-	return static_cast<PuzzleWindow*>(Self()->Window())->Frontend();
-}
 
 
 void
@@ -330,7 +164,7 @@ PuzzleView::DrawRect(void *handle, int x, int y, int w, int h, int colour)
 void
 PuzzleView::DrawLine(void *view, int x1, int y1, int x2, int y2, int colour)
 {
-	Self()->SetHighColor(0, 255, 0);
+	//Self()->SetHighColor(0, 255, 0);
 	//Self()->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
 }
 
@@ -421,49 +255,7 @@ PuzzleView::BlitterLoad(void *view, blitter *bl, int x, int y)
 
 
 
-// PuzzleWindow
 
-
-PuzzleWindow::PuzzleWindow(BRect frame)
-	: BWindow(frame, "Portable Puzzle Collection",
-		B_TITLED_WINDOW_LOOK, 
-		B_NORMAL_WINDOW_FEEL, 
-		//B_NOT_MOVABLE | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | 
-		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE | 
-		B_ASYNCHRONOUS_CONTROLS,
-		B_ALL_WORKSPACES)
-{
-	PuzzleView *view = PuzzleView::Self();
-	AddChild(view);
-
-	// we don't need to pulse unless a timer is requested
-	//SetPulseRate(1000000LL);
-
-	fFrontEnd = snew(frontend);
-	memset(fFrontEnd, 0, sizeof(frontend));
-
-	fFrontEnd->view = view;
-
-	fFrontEnd->midEnd = midend_new(fFrontEnd, &thegame, &haiku_api, fFrontEnd);
-	midend_new_game(fFrontEnd->midEnd);
-
-	int numColours;
-	float *colours;
-
-	colours = midend_colours(fFrontEnd->midEnd, &numColours);
-
-	int x, y;
-	x = 1000; y = 1000;
-	midend_size(fFrontEnd->midEnd, &x, &y, false);
-
-	ResizeTo(x, y);
-	CenterOnScreen();
-}
-
-
-PuzzleWindow::~PuzzleWindow()
-{
-}
 
 
 // PuzzleApp
@@ -500,6 +292,190 @@ PuzzleApp::MessageReceived(BMessage *message)
 		default:
 			BApplication::MessageReceived(message);
 	}
+}
+
+
+// haiku API
+
+
+struct frontend : drawing_api {
+	midend *midEnd;
+
+	bool timer_active;
+	struct timeval last_time;
+
+	PuzzleView *view;
+
+	rgb_color *colours;
+};
+
+struct frontend haiku_api {
+	[](void *self, int x, int y, int fontType,
+		int fontSize, int align, int colour, const char *text)
+	{
+		frontend *frontEnd = static_cast<frontend*>(self);
+
+		rgb_color fore;
+		fore.set_to(16, 16, 16);
+		frontEnd->view->SetHighColor(fore);
+
+		BFont font(be_plain_font);
+		int textWidth = font.StringWidth(text);
+		font_height fontHeight;
+		font.GetHeight(&fontHeight);
+
+		BPoint startPoint(x, y);
+
+		if (align & ALIGN_VCENTRE)
+		{
+			// offset y, so that it's middle of capitalised text
+			startPoint.y -= fontHeight.ascent / 2;
+		}
+
+		if (align & ALIGN_HRIGHT)
+		{
+			startPoint.x -= textWidth;
+		}
+		else if (align & ALIGN_HCENTRE)
+		{
+			startPoint.x -= textWidth / 2;
+		}
+
+		frontEnd->view->DrawString(text, startPoint);
+	},
+
+	[](void *self, int x, int y, int w, int h, int colour)
+	{
+		frontend *frontEnd = static_cast<frontend*>(self);
+
+		/*Self()->SetHighColor(
+			Frontend()->colours[3 * colour + 0],
+			Frontend()->colours[3 * colour + 1],
+			Frontend()->colours[3 * colour + 2]
+		);*/
+		rgb_color fore;
+		fore.set_to(0, 255, 0);
+		switch (colour) {
+			case 1: fore.set_to(0, 0, 0); break;
+			case 8: fore.set_to(64, 127, 88); break;
+			case 7: fore.set_to(127, 88, 64); break;
+			case 32: fore.set_to(255, 255, 255); break;
+			case 31: fore.set_to(222, 222, 222); break;
+			case 20: fore.set_to(0, 0, 200); break;
+			default: fore.set_to(0, 255, 255); break;
+		}
+		frontEnd->view->SetHighColor(fore);
+		frontEnd->view->MovePenTo(0., 0.);
+		frontEnd->view->FillRect(BRect(x, y, x+w, y+h));
+	},
+
+	[](void *self, int x1, int y1, int x2, int y2, int colour)
+	{
+		frontend *frontEnd = static_cast<frontend*>(self);
+
+		frontEnd->view->SetHighColor(0, 255, 0);
+		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
+	},
+
+	[](void *self, const int *coords, int numPoints,
+			int fillColour, int strokeColour)
+	{
+
+	},
+
+	[](void *self, int cx, int cy, int radius,
+			int fillColour, int strokeColour)
+	{
+	},
+
+	[](void *self, int x, int y, int w, int h)
+	{
+
+	},
+
+	[](void *self, int x, int y, int w, int h)
+	{
+
+	},
+
+	[](void *self)
+	{
+
+	},
+
+	[](void *self)
+	{
+
+	},
+
+	[](void *self)
+	{
+
+	},
+
+	[](void *self, const char *text)
+	{
+
+	},
+
+	NULL, // blitter_new
+	NULL, // blitter_free
+	NULL, // blitter_save
+	NULL, // blitter_load
+	// printing
+    NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
+    NULL, NULL,			       /* line_width, line_dotted */
+    NULL,
+    NULL,
+};
+
+
+void
+PuzzleView::Draw(BRect updateRect)
+{
+	midend_force_redraw(haiku_api.midEnd);
+}
+
+
+// PuzzleWindow
+
+
+PuzzleWindow::PuzzleWindow(BRect frame)
+	: BWindow(frame, "Portable Puzzle Collection",
+		B_TITLED_WINDOW_LOOK, 
+		B_NORMAL_WINDOW_FEEL, 
+		//B_NOT_MOVABLE | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | 
+		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE | 
+		B_ASYNCHRONOUS_CONTROLS,
+		B_ALL_WORKSPACES)
+{
+	PuzzleView *view = new PuzzleView(frame);
+	
+
+	// we don't need to pulse unless a timer is requested
+	//SetPulseRate(1000000LL);
+
+	haiku_api.view = view;
+	haiku_api.midEnd = midend_new(&haiku_api, &thegame, &haiku_api, &haiku_api);
+	midend_new_game(haiku_api.midEnd);
+
+	int numColours;
+	float *colours;
+
+	colours = midend_colours(haiku_api.midEnd, &numColours);
+
+	int x, y;
+	x = 1000; y = 1000;
+	midend_size(haiku_api.midEnd, &x, &y, false);
+
+	AddChild(view);
+	ResizeTo(x, y);
+	CenterOnScreen();
+}
+
+
+PuzzleWindow::~PuzzleWindow()
+{
 }
 
 
