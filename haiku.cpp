@@ -404,6 +404,22 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	x = 1000; y = 1000;
 	midend_size(haiku_api.midEnd, &x, &y, false);
 
+	// walk through the presets, and print them out, to see what we get :-)
+	int menu_limit = 0;
+	preset_menu *menu = NULL;
+	preset_menu_entry *menu_entry = NULL;
+
+	menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
+	while (menu != NULL) {
+		for (int i = 0; i < menu->n_entries; ++i) {
+			menu_entry = &menu->entries[i];
+
+			printf("%s\n", menu_entry->title);
+		}
+
+		menu = NULL;
+	}
+
 	AddChild(view);
 	ResizeTo(x, y);
 	CenterOnScreen();
