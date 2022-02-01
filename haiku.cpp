@@ -293,30 +293,38 @@ PuzzleView::MessageReceived(BMessage *message)
 		case B_MOUSE_UP:
 			{
 				message->FindPoint("where", &where);
-	
+
 				// mouse up only occurs when no buttons are depressed
 				if (message->what == B_MOUSE_DOWN)
 					message->FindInt32("buttons", &buttons);
-				
+
 				// if the state hasn't changed, do nothing
 				if (buttons == haiku_api.button_state)
 					return;
-				
+
+				// forward/back buttons for redo/undo
+				if (buttons == B_MOUSE_BUTTON(4))
+					if (midend_can_undo(haiku_api.midEnd))
+						translatedButtons = UI_UNDO;
+				if (buttons == B_MOUSE_BUTTON(5))
+					if (midend_can_redo(haiku_api.midEnd))
+						translatedButtons = UI_REDO;
+
 				if (buttons & B_PRIMARY_MOUSE_BUTTON)
 					translatedButtons |= LEFT_BUTTON;
 				else if (haiku_api.button_state & B_PRIMARY_MOUSE_BUTTON)
 					translatedButtons |= LEFT_RELEASE;
-				
+
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_BUTTON;
 				else if (haiku_api.button_state & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_RELEASE;
-				
+
 				if (buttons & B_TERTIARY_MOUSE_BUTTON)
 					translatedButtons |- MIDDLE_BUTTON;
 				else if (haiku_api.button_state & B_TERTIARY_MOUSE_BUTTON)
 					translatedButtons |= MIDDLE_RELEASE;
-				
+
 				haiku_api.button_state = buttons;
 				
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
