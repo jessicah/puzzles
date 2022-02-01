@@ -21,8 +21,6 @@ public:
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
-	void	MouseDown(BPoint point);
-	void	MouseUp(BPoint point);
 private:
 	// controls here
 };
@@ -71,17 +69,6 @@ PuzzleView::~PuzzleView()
 void
 PuzzleView::AttachedToWindow()
 {
-}
-
-
-void
-PuzzleView::MessageReceived(BMessage *message)
-{
-	switch (message->what) {
-		default:
-			message->PrintToStream();
-			BView::MessageReceived(message);
-	}
 }
 
 
@@ -145,6 +132,8 @@ struct frontend : drawing_api {
 	PuzzleView *view;
 
 	rgb_color *colours;
+	
+	int32 button_state;
 
 	const rgb_color& get_colour(int index)
 	{
@@ -172,8 +161,7 @@ struct frontend haiku_api {
 
 		if (align & ALIGN_VCENTRE)
 		{
-			// offset y, so that it's middle of capitalised text
-			startPoint.y -= fontHeight.ascent / 2;
+			startPoint.y += fontHeight.ascent / 2;
 		}
 
 		if (align & ALIGN_HRIGHT)
@@ -204,20 +192,41 @@ struct frontend haiku_api {
 
 		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
 		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
-		//printf("draw line: (%d,%d) => (%d,%d)\n", x1, y1, x2, y2);
 	},
 
 	// draw_polygon
 	[](void *self, const int *coords, int numPoints,
 			int fillColour, int strokeColour)
 	{
-
+		frontend *frontEnd = static_cast<frontend*>(self);
+		
+		BPoint points[numPoints] = {};
+		for (int i = 0; i < numPoints; ++i)
+			points[i] = BPoint(coords[i*2+0], coords[i*2+1]);
+		
+		if (fillColour >= 0) {
+			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
+			frontEnd->view->FillPolygon(points, numPoints);
+		}
+		
+		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
+		frontEnd->view->StrokePolygon(points, numPoints);
 	},
 
 	// draw_circle
 	[](void *self, int cx, int cy, int radius,
 			int fillColour, int strokeColour)
 	{
+		frontend *frontEnd = static_cast<frontend*>(self);
+
+		if (fillColour >= 0) {
+			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
+			frontEnd->view->FillEllipse(BPoint(cx, cy), radius, radius);
+		}
+		
+		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
+		frontEnd->view->StrokeEllipse(BPoint(cx, cy), radius, radius);
+		printf("circle");
 	},
 
 	// draw_update
@@ -280,44 +289,70 @@ PuzzleView::Draw(BRect updateRect)
 
 
 void
-PuzzleView::MouseDown(BPoint point)
+PuzzleView::MessageReceived(BMessage *message)
 {
+	BPoint where;
 	int32 buttons = 0;
-	if (Window() != NULL && Window()->CurrentMessage() != NULL) {
-		Window()->CurrentMessage()->FindInt32("buttons", &buttons);
-	}
-
-	if (buttons == 0)
-		return;
-
-	int translatedButton = 0;
-	if (buttons & B_PRIMARY_MOUSE_BUTTON)
-		translatedButton |= LEFT_BUTTON;
-	if (buttons & B_SECONDARY_MOUSE_BUTTON)
-		translatedButton |= RIGHT_BUTTON;
 	
-	midend_process_key(haiku_api.midEnd, point.x, point.y, translatedButton);
-}
-
-
-void
-PuzzleView::MouseUp(BPoint point)
-{
-	int32 buttons = 0;
-	if (Window() != NULL && Window()->CurrentMessage() != NULL) {
-		Window()->CurrentMessage()->FindInt32("buttons", &buttons);
-	}
-
-	if (buttons == 0)
-		return;
-
-	int translatedButton = 0;
-	if (buttons & B_PRIMARY_MOUSE_BUTTON)
-		translatedButton |= LEFT_RELEASE;
-	if (buttons & B_SECONDARY_MOUSE_BUTTON)
-		translatedButton |= RIGHT_RELEASE;
+	switch (message->what) {
+		case B_MOUSE_DOWN:
+		case B_MOUSE_UP:
+			{
+				message->FindPoint("where", &where);
 	
-	midend_process_key(haiku_api.midEnd, point.x, point.y, translatedButton);
+				// mouse up only occurs when no buttons are depressed
+				if (message->what == B_MOUSE_DOWN)
+					message->FindInt32("buttons", &buttons);
+				
+				// if the state hasn't changed, do nothing
+				if (buttons == haiku_api.button_state)
+					return;
+				
+				int translatedButtons = 0;
+				
+				if (buttons & B_PRIMARY_MOUSE_BUTTON)
+					translatedButtons |= LEFT_BUTTON;
+				else if (haiku_api.button_state & B_PRIMARY_MOUSE_BUTTON)
+					translatedButtons |= LEFT_RELEASE;
+				
+				if (buttons & B_SECONDARY_MOUSE_BUTTON)
+					translatedButtons |= RIGHT_BUTTON;
+				else if (haiku_api.button_state & B_SECONDARY_MOUSE_BUTTON)
+					translatedButtons |= RIGHT_RELEASE;
+				
+				if (buttons & B_TERTIARY_MOUSE_BUTTON)
+					translatedButtons |- MIDDLE_BUTTON;
+				else if (haiku_api.button_state & B_TERTIARY_MOUSE_BUTTON)
+					translatedButtons |= MIDDLE_RELEASE;
+				
+				haiku_api.button_state = buttons;
+				
+				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				
+				return;
+			}
+		case B_MOUSE_MOVED:
+			{
+				message->FindPoint("where", &where);
+				message->FindInt32("buttons", &buttons);
+			
+				if (buttons == 0)
+					return;
+
+				int translatedButtons = 0;
+				if (buttons & B_PRIMARY_MOUSE_BUTTON)
+					translatedButtons |= LEFT_DRAG;
+				if (buttons & B_SECONDARY_MOUSE_BUTTON)
+					translatedButtons |= RIGHT_DRAG;
+	
+				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				
+				return;
+			}
+		default:
+			message->PrintToStream();
+			BView::MessageReceived(message);
+	}
 }
 
 
