@@ -9,9 +9,6 @@
 #include "puzzles.h"
 
 
-class PuzzleView;
-class PuzzleWindow;
-
 class PuzzleView : public BView {
 public:
 			PuzzleView(BRect frame);
@@ -33,8 +30,6 @@ class PuzzleWindow : public BWindow {
 public:
 			PuzzleWindow(BRect frame);
 	virtual	~PuzzleWindow();
-
-private:
 };
 
 
@@ -226,7 +221,6 @@ struct frontend haiku_api {
 		
 		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
 		frontEnd->view->StrokeEllipse(BPoint(cx, cy), radius, radius);
-		printf("circle");
 	},
 
 	// draw_update
@@ -292,7 +286,7 @@ void
 PuzzleView::MessageReceived(BMessage *message)
 {
 	BPoint where;
-	int32 buttons = 0;
+	int32 buttons = 0, translatedButtons = 0;
 	
 	switch (message->what) {
 		case B_MOUSE_DOWN:
@@ -307,8 +301,6 @@ PuzzleView::MessageReceived(BMessage *message)
 				// if the state hasn't changed, do nothing
 				if (buttons == haiku_api.button_state)
 					return;
-				
-				int translatedButtons = 0;
 				
 				if (buttons & B_PRIMARY_MOUSE_BUTTON)
 					translatedButtons |= LEFT_BUTTON;
@@ -339,7 +331,6 @@ PuzzleView::MessageReceived(BMessage *message)
 				if (buttons == 0)
 					return;
 
-				int translatedButtons = 0;
 				if (buttons & B_PRIMARY_MOUSE_BUTTON)
 					translatedButtons |= LEFT_DRAG;
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
@@ -347,6 +338,17 @@ PuzzleView::MessageReceived(BMessage *message)
 	
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
 				
+				return;
+			}
+		case B_KEY_UP:
+		case B_KEY_DOWN:
+			{
+				int32 key;
+				message->FindInt32("raw_char", &key);
+				haiku_api.view->GetMouse(&where, NULL);
+
+				midend_process_key(haiku_api.midEnd, where.x, where.y, key);
+
 				return;
 			}
 		default:
@@ -397,6 +399,8 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	AddChild(view);
 	ResizeTo(x, y);
 	CenterOnScreen();
+
+	view->MakeFocus();
 }
 
 
