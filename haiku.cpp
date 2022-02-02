@@ -136,7 +136,7 @@ struct frontend : drawing_api {
 	PuzzleView *view;
 
 	rgb_color *colours;
-	
+
 	int32 button_state;
 
 	const rgb_color& get_colour(int index)
@@ -203,16 +203,16 @@ struct frontend haiku_api {
 			int fillColour, int strokeColour)
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
-		
+
 		BPoint points[numPoints] = {};
 		for (int i = 0; i < numPoints; ++i)
 			points[i] = BPoint(coords[i*2+0], coords[i*2+1]);
-		
+
 		if (fillColour >= 0) {
 			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
 			frontEnd->view->FillPolygon(points, numPoints);
 		}
-		
+
 		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
 		frontEnd->view->StrokePolygon(points, numPoints);
 	},
@@ -227,7 +227,7 @@ struct frontend haiku_api {
 			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
 			frontEnd->view->FillEllipse(BPoint(cx, cy), radius, radius);
 		}
-		
+
 		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
 		frontEnd->view->StrokeEllipse(BPoint(cx, cy), radius, radius);
 	},
@@ -296,7 +296,7 @@ PuzzleView::MessageReceived(BMessage *message)
 {
 	BPoint where;
 	int32 buttons = 0, translatedButtons = 0;
-	
+
 	switch (message->what) {
 		case B_MOUSE_DOWN:
 		case B_MOUSE_UP:
@@ -335,16 +335,16 @@ PuzzleView::MessageReceived(BMessage *message)
 					translatedButtons |= MIDDLE_RELEASE;
 
 				haiku_api.button_state = buttons;
-				
+
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
-				
+
 				return;
 			}
 		case B_MOUSE_MOVED:
 			{
 				message->FindPoint("where", &where);
 				message->FindInt32("buttons", &buttons);
-			
+
 				if (buttons == 0)
 					return;
 
@@ -352,9 +352,9 @@ PuzzleView::MessageReceived(BMessage *message)
 					translatedButtons |= LEFT_DRAG;
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_DRAG;
-	
+
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
-				
+
 				return;
 			}
 		case B_KEY_UP:
@@ -392,14 +392,14 @@ PuzzleView::GetPreferredSize(float *_width, float *_height)
 
 PuzzleWindow::PuzzleWindow(BRect frame)
 	: BWindow(frame, "Portable Puzzle Collection",
-		B_TITLED_WINDOW_LOOK, 
-		B_NORMAL_WINDOW_FEEL, 
-		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE | 
+		B_TITLED_WINDOW_LOOK,
+		B_NORMAL_WINDOW_FEEL,
+		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE |
 		B_ASYNCHRONOUS_CONTROLS,
 		B_ALL_WORKSPACES)
 {
 	PuzzleView *view = new PuzzleView();
-	
+
 
 	// we don't need to pulse unless a timer is requested
 	//SetPulseRate(1000000LL);
@@ -436,10 +436,18 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 
 			printf("%s\n", menu_entry->title);
 
+			if (menu_entry->params == NULL) {
+				printf("skipping menu entry, no game params: %s\n", menu_entry->title);
+				continue;
+			}
+
 			BMessage *message = new BMessage(GAME_TYPE);
 			message->AddInt32("index", menu_entry->id);
 			message->AddString("name", menu_entry->title);
+			message->AddPointer("params", menu_entry->params);
+
 			BMenuItem *menuItem = new BMenuItem(menu_entry->title, message);
+
 			menuItem->SetTarget(view);
 			typeMenu->AddItem(menuItem);
 		}
@@ -474,10 +482,25 @@ PuzzleWindow::MessageReceived(BMessage *message)
 		case GAME_TYPE:
 			{
 				BString name;
-				int32 index;
+				game_params *params = NULL;
+
 				message->FindString("name", &name);
-				message->FindInt32("index", &index);
-				printf("requested new game type: %d, %s\n", index, name.String());
+				message->FindPointer("params", (void**)&params);
+
+				printf("requested new game type: %s\n", name.String());
+
+				if (params == NULL) {
+					printf("unable to locate game params\n");
+					return;
+				}
+
+				midend_set_params(haiku_api.midEnd, params);
+				midend_new_game(haiku_api.midEnd);
+
+				InvalidateLayout(true);
+				ResizeToPreferred();
+
+				haiku_api.view->Invalidate();
 
 				return;
 			}
@@ -519,7 +542,7 @@ void activate_timer(frontend *fe)
 {
     if (!fe)
 		return;			       /* can happen due to --generate */
-    
+
 	if (!fe->timer_active) {
         //fe->timer_id = g_timeout_add(20, timer_func, fe);
 		gettimeofday(&fe->last_time, NULL);
