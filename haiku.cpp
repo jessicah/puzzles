@@ -2,6 +2,7 @@
 #include <LayoutBuilder.h>
 #include <MenuBar.h>
 #include <MenuItem.h>
+#include <Picture.h>
 #include <Rect.h>
 #include <View.h>
 #include <Window.h>
@@ -120,9 +121,20 @@ struct frontend : drawing_api {
 
 	int32 button_state;
 
+	BPicture *picture;
+
 	const rgb_color& get_colour(int index)
 	{
 		return colours[index];
+	}
+
+	template <typename Func>
+	void draw(const Func& func)
+	{
+		view->AppendToPicture(picture);
+		func();
+		picture = view->EndPicture();
+		view->Invalidate();
 	}
 };
 
@@ -268,6 +280,9 @@ struct frontend haiku_api {
 void
 PuzzleView::AttachedToWindow()
 {
+	haiku_api.draw([] {
+		midend_redraw(haiku_api.midEnd);
+	});
 }
 
 
@@ -286,14 +301,19 @@ PuzzleView::Pulse()
 	bigtime_t delta = current - haiku_api.delta;
 	haiku_api.delta = current;
 
-	midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
+	haiku_api.draw([delta] {
+		midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
+	});
 }
 
 
 void
 PuzzleView::Draw(BRect updateRect)
 {
-	midend_force_redraw(haiku_api.midEnd);
+	printf("in draw\n");
+	//midend_redraw(haiku_api.midEnd);
+	haiku_api.view->DrawPicture(haiku_api.picture, BPoint(0, 0));
+	printf("out of draw\n");
 }
 
 
@@ -342,7 +362,9 @@ PuzzleView::MessageReceived(BMessage *message)
 
 				haiku_api.button_state = buttons;
 
-				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				haiku_api.draw([&where, translatedButtons] {
+					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				});
 
 				return;
 			}
@@ -359,7 +381,9 @@ PuzzleView::MessageReceived(BMessage *message)
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_DRAG;
 
-				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				haiku_api.draw([&where, translatedButtons] {
+					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				});
 
 				return;
 			}
@@ -370,7 +394,9 @@ PuzzleView::MessageReceived(BMessage *message)
 				message->FindInt32("raw_char", &key);
 				haiku_api.view->GetMouse(&where, NULL);
 
-				midend_process_key(haiku_api.midEnd, where.x, where.y, key);
+				haiku_api.draw([&where, key] {
+					midend_process_key(haiku_api.midEnd, where.x, where.y, key);
+				});
 
 				return;
 			}
@@ -408,6 +434,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	// we don't need to pulse unless a timer is requested
 	//SetPulseRate(1000000LL);
 
+	haiku_api.picture = new BPicture();
 	haiku_api.view = view;
 	haiku_api.midEnd = midend_new(&haiku_api, &thegame, &haiku_api, &haiku_api);
 	midend_new_game(haiku_api.midEnd);
@@ -471,6 +498,10 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	view->MakeFocus();
 
 	ResizeToPreferred();
+
+	haiku_api.draw([] {
+		midend_force_redraw(haiku_api.midEnd);
+	});
 }
 
 
@@ -504,7 +535,9 @@ PuzzleWindow::MessageReceived(BMessage *message)
 				InvalidateLayout(true);
 				ResizeToPreferred();
 
-				haiku_api.view->Invalidate();
+				haiku_api.draw([] {
+					midend_force_redraw(haiku_api.midEnd);
+				});
 
 				return;
 			}
