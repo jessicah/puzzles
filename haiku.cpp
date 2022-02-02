@@ -1,4 +1,7 @@
 #include <Application.h>
+#include <LayoutBuilder.h>
+#include <MenuBar.h>
+#include <MenuItem.h>
 #include <Rect.h>
 #include <View.h>
 #include <Window.h>
@@ -9,15 +12,19 @@
 #include "puzzles.h"
 
 
+const uint32 GAME_TYPE = 'gmtp';
+
+
 class PuzzleView : public BView {
 public:
-			PuzzleView(BRect frame);
+			PuzzleView();
 	virtual	~PuzzleView();
 
 	void	AttachedToWindow();
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
+	void	GetPreferredSize(float *_width, float *_height);
 private:
 	// controls here
 };
@@ -30,6 +37,8 @@ class PuzzleWindow : public BWindow {
 public:
 			PuzzleWindow(BRect frame);
 	virtual	~PuzzleWindow();
+
+	void	MessageReceived(BMessage *message);
 };
 
 
@@ -49,8 +58,8 @@ private:
 // PuzzleView
 
 
-PuzzleView::PuzzleView(BRect frame)
-	: BView(frame, "PuzzleView", B_FOLLOW_ALL, B_PULSE_NEEDED | B_WILL_DRAW)
+PuzzleView::PuzzleView()
+	: BView("PuzzleView", B_PULSE_NEEDED | B_WILL_DRAW)
 {
 	SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
 	SetLowUIColor(ViewUIColor());
@@ -366,6 +375,18 @@ PuzzleView::MessageReceived(BMessage *message)
 }
 
 
+void
+PuzzleView::GetPreferredSize(float *_width, float *_height)
+{
+	int x, y;
+	x = 1000; y = 1000;
+	midend_size(haiku_api.midEnd, &x, &y, false);
+
+	if (_width != NULL) *_width = x;
+	if (_height != NULL) *_height = y;
+}
+
+
 // PuzzleWindow
 
 
@@ -373,12 +394,11 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	: BWindow(frame, "Portable Puzzle Collection",
 		B_TITLED_WINDOW_LOOK, 
 		B_NORMAL_WINDOW_FEEL, 
-		//B_NOT_MOVABLE | B_NOT_CLOSABLE | B_NOT_ZOOMABLE | 
 		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE | 
 		B_ASYNCHRONOUS_CONTROLS,
 		B_ALL_WORKSPACES)
 {
-	PuzzleView *view = new PuzzleView(frame);
+	PuzzleView *view = new PuzzleView();
 	
 
 	// we don't need to pulse unless a timer is requested
@@ -400,36 +420,71 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 		haiku_api.colours[i].blue  = 255 * colours[i * 3 + 2];
 	}
 
-	int x, y;
-	x = 1000; y = 1000;
-	midend_size(haiku_api.midEnd, &x, &y, false);
-
 	// walk through the presets, and print them out, to see what we get :-)
 	int menu_limit = 0;
 	preset_menu *menu = NULL;
 	preset_menu_entry *menu_entry = NULL;
 
 	menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
+
+	BMenuBar *mainMenu = new BMenuBar("main menu");
+	BMenu *typeMenu = new BMenu("Type");
+
 	while (menu != NULL) {
 		for (int i = 0; i < menu->n_entries; ++i) {
 			menu_entry = &menu->entries[i];
 
 			printf("%s\n", menu_entry->title);
+
+			BMessage *message = new BMessage(GAME_TYPE);
+			message->AddInt32("index", menu_entry->id);
+			message->AddString("name", menu_entry->title);
+			BMenuItem *menuItem = new BMenuItem(menu_entry->title, message);
+			menuItem->SetTarget(view);
+			typeMenu->AddItem(menuItem);
 		}
 
 		menu = NULL;
 	}
 
-	AddChild(view);
-	ResizeTo(x, y);
+	mainMenu->AddItem(typeMenu);
+
+	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
+		.Add(mainMenu)
+		.Add(view)
+		.End();
+
 	CenterOnScreen();
 
 	view->MakeFocus();
+
+	ResizeToPreferred();
 }
 
 
 PuzzleWindow::~PuzzleWindow()
 {
+}
+
+
+void
+PuzzleWindow::MessageReceived(BMessage *message)
+{
+	switch (message->what) {
+		case GAME_TYPE:
+			{
+				BString name;
+				int32 index;
+				message->FindString("name", &name);
+				message->FindInt32("index", &index);
+				printf("requested new game type: %d, %s\n", index, name.String());
+
+				return;
+			}
+		default:
+			message->PrintToStream();
+			BWindow::MessageReceived(message);
+	}
 }
 
 
