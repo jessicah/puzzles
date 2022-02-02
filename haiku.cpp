@@ -70,24 +70,6 @@ PuzzleView::~PuzzleView()
 {
 }
 
-void
-PuzzleView::AttachedToWindow()
-{
-}
-
-
-void
-PuzzleView::Pulse()
-{
-	BString info;
-	time_t now = time(NULL);
-	struct tm *t = localtime(&now);
-	// TODO: use strftime and locale settings
-	info << asctime(t);
-	info.RemoveSet("\r\n");
-	//fInfoView->SetText(info.String());
-}
-
 
 // PuzzleApp
 
@@ -130,8 +112,7 @@ PuzzleApp::MessageReceived(BMessage *message)
 struct frontend : drawing_api {
 	midend *midEnd;
 
-	bool timer_active;
-	struct timeval last_time;
+	bigtime_t delta;
 
 	PuzzleView *view;
 
@@ -285,6 +266,31 @@ struct frontend haiku_api {
 
 
 void
+PuzzleView::AttachedToWindow()
+{
+}
+
+
+void
+PuzzleView::Pulse()
+{
+	/*BString info;
+	time_t now = time(NULL);
+	struct tm *t = localtime(&now);
+	// TODO: use strftime and locale settings
+	info << asctime(t);
+	info.RemoveSet("\r\n");
+	//fInfoView->SetText(info.String());*/
+
+	bigtime_t current = system_time();
+	bigtime_t delta = current - haiku_api.delta;
+	haiku_api.delta = current;
+
+	midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
+}
+
+
+void
 PuzzleView::Draw(BRect updateRect)
 {
 	midend_force_redraw(haiku_api.midEnd);
@@ -394,9 +400,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	: BWindow(frame, "Portable Puzzle Collection",
 		B_TITLED_WINDOW_LOOK,
 		B_NORMAL_WINDOW_FEEL,
-		//B_NOT_MINIMIZABLE | B_NOT_RESIZABLE |
-		B_ASYNCHRONOUS_CONTROLS,
-		B_ALL_WORKSPACES)
+		B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_QUIT_ON_WINDOW_CLOSE)
 {
 	PuzzleView *view = new PuzzleView();
 
@@ -540,27 +544,18 @@ void get_random_seed(void **randseed, int *randseedsize)
 
 void activate_timer(frontend *fe)
 {
-    if (!fe)
-		return;			       /* can happen due to --generate */
-
-	if (!fe->timer_active) {
-        //fe->timer_id = g_timeout_add(20, timer_func, fe);
-		gettimeofday(&fe->last_time, NULL);
-    }
-
-    fe->timer_active = true;
+	// recommendation is 20ms, but BeAPI docs suggest no less than 100,000us.
+	haiku_api.delta = system_time();
+    haiku_api.view->Window()->SetPulseRate(100000);
 }
 
 
 void deactivate_timer(frontend *fe)
 {
-    if (!fe)
-		return;			       /* can happen due to --generate */
+	if (haiku_api.view == NULL || haiku_api.view->Window() == NULL)
+		return;
 
-    if (fe->timer_active)
-        ;//g_source_remove(fe->timer_id);
-
-    fe->timer_active = false;
+	haiku_api.view->Window()->SetPulseRate(0);
 }
 
 
