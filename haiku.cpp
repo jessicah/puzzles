@@ -1,4 +1,5 @@
 #include <Application.h>
+#include <Bitmap.h>
 #include <LayoutBuilder.h>
 #include <MenuBar.h>
 #include <MenuItem.h>
@@ -115,6 +116,8 @@ struct frontend : drawing_api {
 	bigtime_t delta;
 
 	PuzzleView *view;
+	BView *offscreen_view;
+	BBitmap *offscreen;
 
 	rgb_color *colours;
 
@@ -134,7 +137,7 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
 
 		// could probably calculate this once
 		BFont font(be_plain_font);
@@ -158,7 +161,7 @@ struct frontend haiku_api {
 			startPoint.x -= textWidth / 2;
 		}
 
-		frontEnd->view->DrawString(text, startPoint);
+		frontEnd->offscreen_view->DrawString(text, startPoint);
 	},
 
 	// draw_rect
@@ -166,8 +169,8 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
-		frontEnd->view->FillRect(BRect(x, y, x+w-1, y+h-1));
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
+		frontEnd->offscreen_view->FillRect(BRect(x, y, x+w-1, y+h-1));
 	},
 
 	// draw_line
@@ -175,8 +178,8 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->SetHighColor(frontEnd->get_colour(colour));
-		frontEnd->view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
+		frontEnd->offscreen_view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
 	},
 
 	// draw_polygon
@@ -190,12 +193,12 @@ struct frontend haiku_api {
 			points[i] = BPoint(coords[i*2+0], coords[i*2+1]);
 
 		if (fillColour >= 0) {
-			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
-			frontEnd->view->FillPolygon(points, numPoints);
+			frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
+			frontEnd->offscreen_view->FillPolygon(points, numPoints);
 		}
 
-		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
-		frontEnd->view->StrokePolygon(points, numPoints);
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
+		frontEnd->offscreen_view->StrokePolygon(points, numPoints);
 	},
 
 	// draw_circle
@@ -205,12 +208,12 @@ struct frontend haiku_api {
 		frontend *frontEnd = static_cast<frontend*>(self);
 
 		if (fillColour >= 0) {
-			frontEnd->view->SetHighColor(frontEnd->get_colour(fillColour));
-			frontEnd->view->FillEllipse(BPoint(cx, cy), radius, radius);
+			frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
+			frontEnd->offscreen_view->FillEllipse(BPoint(cx, cy), radius, radius);
 		}
 
-		frontEnd->view->SetHighColor(frontEnd->get_colour(strokeColour));
-		frontEnd->view->StrokeEllipse(BPoint(cx, cy), radius, radius);
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
+		frontEnd->offscreen_view->StrokeEllipse(BPoint(cx, cy), radius, radius);
 	},
 
 	// draw_update
@@ -224,7 +227,7 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->ClipToRect(BRect(x, y, w+x, h+y));
+		frontEnd->offscreen_view->ClipToRect(BRect(x, y, w+x, h+y));
 	},
 
 	// unclip
@@ -232,7 +235,7 @@ struct frontend haiku_api {
 	{
 		frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->view->ConstrainClippingRegion(NULL);
+		frontEnd->offscreen_view->ConstrainClippingRegion(NULL);
 	},
 
 	// start_draw
@@ -286,14 +289,25 @@ PuzzleView::Pulse()
 	bigtime_t delta = current - haiku_api.delta;
 	haiku_api.delta = current;
 
+	haiku_api.offscreen->Lock();
 	midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
+	haiku_api.offscreen->Unlock();
+
+	Invalidate();
 }
 
 
 void
 PuzzleView::Draw(BRect updateRect)
 {
-	midend_force_redraw(haiku_api.midEnd);
+	haiku_api.offscreen->Lock();
+
+	midend_redraw(haiku_api.midEnd);
+
+	haiku_api.offscreen_view->Sync();
+	haiku_api.view->DrawBitmap(haiku_api.offscreen, BPoint(0, 0));
+	haiku_api.view->Sync();
+	haiku_api.offscreen->Unlock();
 }
 
 
@@ -342,7 +356,13 @@ PuzzleView::MessageReceived(BMessage *message)
 
 				haiku_api.button_state = buttons;
 
+				// can trigger a draw
+				haiku_api.offscreen->Lock();
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				haiku_api.offscreen_view->Sync();
+				haiku_api.offscreen->Unlock();
+
+				Invalidate();
 
 				return;
 			}
@@ -359,7 +379,13 @@ PuzzleView::MessageReceived(BMessage *message)
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_DRAG;
 
+				// can trigger a draw
+				haiku_api.offscreen->Lock();
 				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				haiku_api.offscreen_view->Sync();
+				haiku_api.offscreen->Unlock();
+
+				Invalidate();
 
 				return;
 			}
@@ -370,7 +396,12 @@ PuzzleView::MessageReceived(BMessage *message)
 				message->FindInt32("raw_char", &key);
 				haiku_api.view->GetMouse(&where, NULL);
 
+				// can trigger a draw
+				haiku_api.offscreen->Lock();
 				midend_process_key(haiku_api.midEnd, where.x, where.y, key);
+				haiku_api.offscreen_view->Sync();
+				haiku_api.view->DrawBitmap(haiku_api.offscreen, BPoint(0, 0));
+				haiku_api.offscreen->Unlock();
 
 				return;
 			}
@@ -471,6 +502,10 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	view->MakeFocus();
 
 	ResizeToPreferred();
+
+	haiku_api.offscreen = new BBitmap(view->Bounds(), B_RGB_32_BIT, true);
+	haiku_api.offscreen_view = new BView(view->Bounds(), "offscreen view", B_FOLLOW_ALL, B_WILL_DRAW);
+	haiku_api.offscreen->AddChild(haiku_api.offscreen_view);
 }
 
 
@@ -504,12 +539,29 @@ PuzzleWindow::MessageReceived(BMessage *message)
 				InvalidateLayout(true);
 				ResizeToPreferred();
 
+				Lock();
+				if (haiku_api.offscreen->Bounds() != haiku_api.view->Bounds()) {
+					BBitmap *offscreen = haiku_api.offscreen;
+					BView *offscreen_view = haiku_api.offscreen_view;
+
+					offscreen->Lock();
+					offscreen->RemoveChild(offscreen_view);
+					offscreen->Unlock();
+
+					haiku_api.offscreen = new BBitmap(haiku_api.view->Bounds(), B_RGB_32_BIT, true);
+					haiku_api.offscreen_view = new BView(haiku_api.view->Bounds(), "offscreen view", B_FOLLOW_ALL, B_WILL_DRAW);
+					haiku_api.offscreen->AddChild(haiku_api.offscreen_view);
+
+					delete offscreen;
+					delete offscreen_view;
+				}
+				Unlock();
+
 				haiku_api.view->Invalidate();
 
 				return;
 			}
 		default:
-			message->PrintToStream();
 			BWindow::MessageReceived(message);
 	}
 }
