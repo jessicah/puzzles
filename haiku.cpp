@@ -368,8 +368,9 @@ PuzzleView::MessageReceived(BMessage *message)
 			}
 		case B_MOUSE_MOVED:
 			{
-				message->FindPoint("where", &where);
-				message->FindInt32("buttons", &buttons);
+				uint32 buttons = 0;
+
+				GetMouse(&where, &buttons);
 
 				if (buttons == 0)
 					return;
