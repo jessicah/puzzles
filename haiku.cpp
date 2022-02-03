@@ -268,6 +268,23 @@ struct frontend haiku_api {
 };
 
 
+
+struct LockBitmap
+{
+	LockBitmap(bool syncView = true) : fSyncView(syncView) {
+		haiku_api.offscreen->Lock();
+	}
+	~LockBitmap() {
+		if (fSyncView)
+			haiku_api.offscreen_view->Sync();
+
+		haiku_api.offscreen->Unlock();
+	}
+private:
+	bool fSyncView;
+};
+
+
 void
 PuzzleView::AttachedToWindow()
 {
@@ -289,9 +306,11 @@ PuzzleView::Pulse()
 	bigtime_t delta = current - haiku_api.delta;
 	haiku_api.delta = current;
 
-	haiku_api.offscreen->Lock();
-	midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
-	haiku_api.offscreen->Unlock();
+	{
+		LockBitmap _;
+
+		midend_timer(haiku_api.midEnd, ((float)delta) / 1000000.);
+	}
 
 	Invalidate();
 }
@@ -356,11 +375,11 @@ PuzzleView::MessageReceived(BMessage *message)
 
 				haiku_api.button_state = buttons;
 
-				// can trigger a draw
-				haiku_api.offscreen->Lock();
-				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
-				haiku_api.offscreen_view->Sync();
-				haiku_api.offscreen->Unlock();
+				{
+					LockBitmap _(true);
+
+					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				}
 
 				Invalidate();
 
@@ -380,11 +399,11 @@ PuzzleView::MessageReceived(BMessage *message)
 				if (buttons & B_SECONDARY_MOUSE_BUTTON)
 					translatedButtons |= RIGHT_DRAG;
 
-				// can trigger a draw
-				haiku_api.offscreen->Lock();
-				midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
-				haiku_api.offscreen_view->Sync();
-				haiku_api.offscreen->Unlock();
+				{
+					LockBitmap _(true);
+
+					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
+				}
 
 				Invalidate();
 
@@ -397,12 +416,11 @@ PuzzleView::MessageReceived(BMessage *message)
 				message->FindInt32("raw_char", &key);
 				haiku_api.view->GetMouse(&where, NULL);
 
-				// can trigger a draw
-				haiku_api.offscreen->Lock();
-				midend_process_key(haiku_api.midEnd, where.x, where.y, key);
-				haiku_api.offscreen_view->Sync();
-				haiku_api.view->DrawBitmap(haiku_api.offscreen, BPoint(0, 0));
-				haiku_api.offscreen->Unlock();
+				{
+					LockBitmap _(true);
+
+					midend_process_key(haiku_api.midEnd, where.x, where.y, key);
+				}
 
 				return;
 			}
@@ -436,9 +454,6 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 {
 	PuzzleView *view = new PuzzleView();
 
-
-	// we don't need to pulse unless a timer is requested
-	//SetPulseRate(1000000LL);
 
 	haiku_api.view = view;
 	haiku_api.midEnd = midend_new(&haiku_api, &thegame, &haiku_api, &haiku_api);
