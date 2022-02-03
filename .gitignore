@@ -136,8 +136,6 @@ include/
 /compile
 /.deps
 /.dirstamp
-/icons/*.png
-/icons/*.ico
 /icons/*.rc
 /icons/*-icon.c
 /icons/*-icon-maker
