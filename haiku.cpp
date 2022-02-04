@@ -19,9 +19,8 @@ const uint32 GAME_TYPE = 'gmtp';
 class PuzzleView : public BView {
 public:
 			PuzzleView();
-	virtual	~PuzzleView();
+	virtual	~PuzzleView() {};
 
-	void	AttachedToWindow();
 	void	MessageReceived(BMessage *message);
 	void	Pulse();
 	void	Draw(BRect updateRect);
@@ -37,7 +36,7 @@ private:
 class PuzzleWindow : public BWindow {
 public:
 			PuzzleWindow(BRect frame);
-	virtual	~PuzzleWindow();
+	virtual	~PuzzleWindow() {};
 
 	void	MessageReceived(BMessage *message);
 };
@@ -46,7 +45,7 @@ public:
 class PuzzleApp : public BApplication {
 public:
 			PuzzleApp();
-	virtual	~PuzzleApp();
+	virtual	~PuzzleApp() {};
 
 	void	ReadyToRun();
 	void	MessageReceived(BMessage *message);
@@ -67,22 +66,12 @@ PuzzleView::PuzzleView()
 }
 
 
-PuzzleView::~PuzzleView()
-{
-}
-
-
 // PuzzleApp
 
 
 PuzzleApp::PuzzleApp()
 	:
 	BApplication("application/x-vnd.Jessica.L.Hamilton-PortablePuzzleCollection")
-{
-}
-
-
-PuzzleApp::~PuzzleApp()
 {
 }
 
@@ -271,24 +260,13 @@ struct frontend haiku_api {
 
 struct LockBitmap
 {
-	LockBitmap(bool syncView = true) : fSyncView(syncView) {
+	LockBitmap() {
 		haiku_api.offscreen->Lock();
 	}
 	~LockBitmap() {
-		if (fSyncView)
-			haiku_api.offscreen_view->Sync();
-
 		haiku_api.offscreen->Unlock();
 	}
-private:
-	bool fSyncView;
 };
-
-
-void
-PuzzleView::AttachedToWindow()
-{
-}
 
 
 void
@@ -325,7 +303,6 @@ PuzzleView::Draw(BRect updateRect)
 
 	haiku_api.offscreen_view->Sync();
 	haiku_api.view->DrawBitmap(haiku_api.offscreen, BPoint(0, 0));
-	haiku_api.view->Sync();
 	haiku_api.offscreen->Unlock();
 }
 
@@ -376,7 +353,7 @@ PuzzleView::MessageReceived(BMessage *message)
 				haiku_api.button_state = buttons;
 
 				{
-					LockBitmap _(true);
+					LockBitmap _;
 
 					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
 				}
@@ -400,7 +377,7 @@ PuzzleView::MessageReceived(BMessage *message)
 					translatedButtons |= RIGHT_DRAG;
 
 				{
-					LockBitmap _(true);
+					LockBitmap _;
 
 					midend_process_key(haiku_api.midEnd, where.x, where.y, translatedButtons);
 				}
@@ -417,10 +394,12 @@ PuzzleView::MessageReceived(BMessage *message)
 				haiku_api.view->GetMouse(&where, NULL);
 
 				{
-					LockBitmap _(true);
+					LockBitmap _;
 
 					midend_process_key(haiku_api.midEnd, where.x, where.y, key);
 				}
+
+				Invalidate();
 
 				return;
 			}
@@ -522,11 +501,6 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	haiku_api.offscreen = new BBitmap(view->Bounds(), B_RGB_32_BIT, true);
 	haiku_api.offscreen_view = new BView(view->Bounds(), "offscreen view", B_FOLLOW_ALL, B_WILL_DRAW);
 	haiku_api.offscreen->AddChild(haiku_api.offscreen_view);
-}
-
-
-PuzzleWindow::~PuzzleWindow()
-{
 }
 
 
