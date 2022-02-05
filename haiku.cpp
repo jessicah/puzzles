@@ -25,8 +25,6 @@ public:
 	void	Pulse();
 	void	Draw(BRect updateRect);
 	void	GetPreferredSize(float *_width, float *_height);
-private:
-	// controls here
 };
 
 
@@ -39,6 +37,10 @@ public:
 	virtual	~PuzzleWindow() {};
 
 	void	MessageReceived(BMessage *message);
+private:
+	void	BuildMenu(BMenu *parentMenu, preset_menu *puzzleMenu);
+
+	PuzzleView  *fPuzzleView;
 };
 
 
@@ -51,7 +53,7 @@ public:
 	void	MessageReceived(BMessage *message);
 
 private:
-	PuzzleWindow*	fPuzzleWindow;
+	PuzzleWindow	*fPuzzleWindow;
 };
 
 
@@ -432,7 +434,7 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 		B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_QUIT_ON_WINDOW_CLOSE)
 {
 	PuzzleView *view = new PuzzleView();
-
+	fPuzzleView = view;
 
 	haiku_api.view = view;
 	haiku_api.midEnd = midend_new(&haiku_api, &thegame, &haiku_api, &haiku_api);
@@ -450,40 +452,13 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 		haiku_api.colours[i].blue  = 255 * colours[i * 3 + 2];
 	}
 
-	// walk through the presets, and print them out, to see what we get :-)
 	int menu_limit = 0;
-	preset_menu *menu = NULL;
-	preset_menu_entry *menu_entry = NULL;
-
-	menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
+	preset_menu *menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
 
 	BMenuBar *mainMenu = new BMenuBar("main menu");
 	BMenu *typeMenu = new BMenu("Type");
 
-	while (menu != NULL) {
-		for (int i = 0; i < menu->n_entries; ++i) {
-			menu_entry = &menu->entries[i];
-
-			printf("%s\n", menu_entry->title);
-
-			if (menu_entry->params == NULL) {
-				printf("skipping menu entry, no game params: %s\n", menu_entry->title);
-				continue;
-			}
-
-			BMessage *message = new BMessage(GAME_TYPE);
-			message->AddInt32("index", menu_entry->id);
-			message->AddString("name", menu_entry->title);
-			message->AddPointer("params", menu_entry->params);
-
-			BMenuItem *menuItem = new BMenuItem(menu_entry->title, message);
-
-			menuItem->SetTarget(view);
-			typeMenu->AddItem(menuItem);
-		}
-
-		menu = NULL;
-	}
+	BuildMenu(typeMenu, menu);
 
 	mainMenu->AddItem(typeMenu);
 
@@ -501,6 +476,37 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	haiku_api.offscreen = new BBitmap(view->Bounds(), B_RGB_32_BIT, true);
 	haiku_api.offscreen_view = new BView(view->Bounds(), "offscreen view", B_FOLLOW_ALL, B_WILL_DRAW);
 	haiku_api.offscreen->AddChild(haiku_api.offscreen_view);
+}
+
+
+void
+PuzzleWindow::BuildMenu(BMenu *parentMenu, preset_menu *puzzleMenu)
+{
+	preset_menu_entry *menuEntry = NULL;
+
+	for (int i = 0; i < puzzleMenu->n_entries; ++i) {
+		menuEntry = &puzzleMenu->entries[i];
+
+		printf("%s\n", menuEntry->title);
+
+		if (menuEntry->params == NULL) {
+			BMenu *subMenu = new BMenu(menuEntry->title);
+			BuildMenu(subMenu, menuEntry->submenu);
+			parentMenu->AddItem(subMenu);
+
+			continue;
+		}
+
+		BMessage *message = new BMessage(GAME_TYPE);
+		message->AddInt32("index", menuEntry->id);
+		message->AddString("name", menuEntry->title);
+		message->AddPointer("params", menuEntry->params);
+
+		BMenuItem *menuItem = new BMenuItem(menuEntry->title, message);
+
+		menuItem->SetTarget(fPuzzleView);
+		parentMenu->AddItem(menuItem);
+	}
 }
 
 
