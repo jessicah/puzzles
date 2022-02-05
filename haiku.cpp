@@ -161,7 +161,7 @@ struct frontend haiku_api {
 		frontend *frontEnd = static_cast<frontend*>(self);
 
 		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
-		frontEnd->offscreen_view->FillRect(BRect(x, y, x+w, y+h));
+		frontEnd->offscreen_view->FillRect(BRect(x, y, x+w-1, y+h-1));
 	},
 
 	// draw_line
