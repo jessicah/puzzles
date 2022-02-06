@@ -149,7 +149,7 @@ struct frontend haiku_api {
 
 		if (align & ALIGN_VCENTRE)
 		{
-			startPoint.y += fontHeight.ascent / 2;
+			startPoint.y += (fontHeight.ascent + fontHeight.descent) / 2 - fontHeight.descent;
 		}
 
 		if (align & ALIGN_HRIGHT)
