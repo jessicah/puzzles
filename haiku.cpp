@@ -130,9 +130,11 @@ struct frontend haiku_api {
 
 		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
 
-		// could probably calculate this once
 		BFont font(be_plain_font);
+		font.SetSize(floorf((72./96.) * fontSize));
+
 		int textWidth = font.StringWidth(text);
+
 		font_height fontHeight;
 		font.GetHeight(&fontHeight);
 
@@ -152,6 +154,7 @@ struct frontend haiku_api {
 			startPoint.x -= textWidth / 2;
 		}
 
+		frontEnd->offscreen_view->SetFont(&font);
 		frontEnd->offscreen_view->DrawString(text, startPoint);
 	},
 
