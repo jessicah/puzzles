@@ -4,6 +4,7 @@
 #include <MenuBar.h>
 #include <MenuItem.h>
 #include <Rect.h>
+#include <StringView.h>
 #include <View.h>
 #include <Window.h>
 
@@ -37,10 +38,15 @@ public:
 	virtual	~PuzzleWindow() {};
 
 	void	MessageReceived(BMessage *message);
+
+	BStringView	*StatusBar() const {
+		return fStatusBar;
+	}
 private:
 	void	BuildMenu(BMenu *parentMenu, preset_menu *puzzleMenu);
 
 	PuzzleView  *fPuzzleView;
+	BStringView	*fStatusBar;
 };
 
 
@@ -247,7 +253,12 @@ struct frontend haiku_api {
 	// status_bar
 	[](void *self, const char *text)
 	{
+		frontend *frontEnd = static_cast<frontend*>(self);
 
+		PuzzleView *view = static_cast<PuzzleView*>(frontEnd->view);
+		PuzzleWindow *window = static_cast<PuzzleWindow*>(view->Window());
+
+		window->StatusBar()->SetText(text);
 	},
 
 	NULL, // blitter_new
@@ -455,6 +466,19 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 		haiku_api.colours[i].blue  = 255 * colours[i * 3 + 2];
 	}
 
+	bool addStatusBar = midend_wants_statusbar(haiku_api.midEnd);
+
+	if (addStatusBar)
+	{
+		printf("a status bar is wanted\n");
+
+		fStatusBar = new BStringView("status bar", "");
+
+		BFont font(be_plain_font);
+		font.SetSize(font.Size() * 0.8);
+		fStatusBar->SetFont(&font, B_FONT_SIZE);
+	}
+
 	int menu_limit = 0;
 	preset_menu *menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
 
@@ -465,10 +489,14 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 
 	mainMenu->AddItem(typeMenu);
 
-	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
+	auto layoutBuilder = BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(mainMenu)
-		.Add(view)
-		.End();
+		.Add(view);
+
+	if (addStatusBar) {
+		layoutBuilder
+			.Add(fStatusBar);
+	}
 
 	CenterOnScreen();
 
