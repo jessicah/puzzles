@@ -15,6 +15,7 @@
 
 
 const uint32 GAME_TYPE = 'gmtp';
+const uint32 SOLVE_GAME = 'slve';
 
 
 class PuzzleView : public BView {
@@ -483,10 +484,14 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	preset_menu *menu = midend_get_presets(haiku_api.midEnd, &menu_limit);
 
 	BMenuBar *mainMenu = new BMenuBar("main menu");
-	BMenu *typeMenu = new BMenu("Type");
 
+	BMenu *gameMenu = new BMenu("Game");
+	gameMenu->AddItem(new BMenuItem("Solve", new BMessage(SOLVE_GAME)));
+
+	BMenu *typeMenu = new BMenu("Type");
 	BuildMenu(typeMenu, menu);
 
+	mainMenu->AddItem(gameMenu);
 	mainMenu->AddItem(typeMenu);
 
 	auto layoutBuilder = BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
@@ -585,6 +590,14 @@ PuzzleWindow::MessageReceived(BMessage *message)
 				Unlock();
 
 				haiku_api.view->Invalidate();
+
+				return;
+			}
+		case SOLVE_GAME:
+			{
+				LockBitmap _;
+
+				midend_solve(haiku_api.midEnd);
 
 				return;
 			}
