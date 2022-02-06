@@ -599,6 +599,8 @@ PuzzleWindow::MessageReceived(BMessage *message)
 
 				midend_solve(haiku_api.midEnd);
 
+				haiku_api.view->Invalidate();
+
 				return;
 			}
 		default:
