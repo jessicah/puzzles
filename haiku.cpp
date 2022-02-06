@@ -14,9 +14,10 @@
 #include "puzzles.h"
 
 
-const uint32 GAME_TYPE = 'gmtp';
-const uint32 SOLVE_GAME = 'slve';
-
+const uint32 GAME_TYPE		= 'gmtp';
+const uint32 SOLVE_GAME		= 'slve';
+const uint32 NEW_GAME		= 'nwgm';
+const uint32 RESTART_GAME	= 'rstr';
 
 class PuzzleView : public BView {
 public:
@@ -486,7 +487,9 @@ PuzzleWindow::PuzzleWindow(BRect frame)
 	BMenuBar *mainMenu = new BMenuBar("main menu");
 
 	BMenu *gameMenu = new BMenu("Game");
-	gameMenu->AddItem(new BMenuItem("Solve", new BMessage(SOLVE_GAME)));
+	gameMenu->AddItem(new BMenuItem("New Game", new BMessage(NEW_GAME)));
+	gameMenu->AddItem(new BMenuItem("Restart Game", new BMessage(RESTART_GAME)));
+	gameMenu->AddItem(new BMenuItem("Solve Game", new BMessage(SOLVE_GAME)));
 
 	BMenu *typeMenu = new BMenu("Type");
 	BuildMenu(typeMenu, menu);
@@ -598,6 +601,26 @@ PuzzleWindow::MessageReceived(BMessage *message)
 				LockBitmap _;
 
 				midend_solve(haiku_api.midEnd);
+
+				haiku_api.view->Invalidate();
+
+				return;
+			}
+		case NEW_GAME:
+			{
+				LockBitmap _;
+
+				midend_new_game(haiku_api.midEnd);
+
+				haiku_api.view->Invalidate();
+
+				return;
+			}
+		case RESTART_GAME:
+			{
+				LockBitmap _;
+
+				midend_restart_game(haiku_api.midEnd);
 
 				haiku_api.view->Invalidate();
 
