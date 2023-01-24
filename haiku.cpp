@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "puzzles.h"
 
@@ -109,6 +110,23 @@ PuzzleApp::MessageReceived(BMessage *message)
 // haiku API
 
 
+struct blitter {
+	BBitmap *backing_store;
+	int w, h, x, y;
+
+	blitter(BRect bounds, color_space colorSpace)
+	{
+		BSize size = bounds.Size();
+		w = size.IntegerWidth();
+		h = size.IntegerHeight();
+		x = 0;
+		y = 0;
+
+		backing_store = new BBitmap(bounds, colorSpace);
+	}
+};
+
+
 struct frontend : drawing_api {
 	midend *midEnd;
 
@@ -129,151 +147,173 @@ struct frontend : drawing_api {
 };
 
 
-struct frontend haiku_api {
-	// draw_text
-	[](void *self, int x, int y, int fontType,
-		int fontSize, int align, int colour, const char *text)
+void haiku_draw_text(void *self, int x, int y, int fontType,
+	int fontSize, int align, int colour, const char *text)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
+
+	frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
+
+	BFont font(be_plain_font);
+	font.SetSize(floorf((72./96.) * fontSize));
+
+	int textWidth = font.StringWidth(text);
+
+	font_height fontHeight;
+	font.GetHeight(&fontHeight);
+
+	BPoint startPoint(x, y);
+
+	if (align & ALIGN_VCENTRE)
 	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+		startPoint.y += (fontHeight.ascent + fontHeight.descent) / 2 - fontHeight.descent;
+	}
 
-		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
-
-		BFont font(be_plain_font);
-		font.SetSize(floorf((72./96.) * fontSize));
-
-		int textWidth = font.StringWidth(text);
-
-		font_height fontHeight;
-		font.GetHeight(&fontHeight);
-
-		BPoint startPoint(x, y);
-
-		if (align & ALIGN_VCENTRE)
-		{
-			startPoint.y += (fontHeight.ascent + fontHeight.descent) / 2 - fontHeight.descent;
-		}
-
-		if (align & ALIGN_HRIGHT)
-		{
-			startPoint.x -= textWidth;
-		}
-		else if (align & ALIGN_HCENTRE)
-		{
-			startPoint.x -= textWidth / 2;
-		}
-
-		frontEnd->offscreen_view->SetFont(&font);
-		frontEnd->offscreen_view->DrawString(text, startPoint);
-	},
-
-	// draw_rect
-	[](void *self, int x, int y, int w, int h, int colour)
+	if (align & ALIGN_HRIGHT)
 	{
-		frontend *frontEnd = static_cast<frontend*>(self);
-
-		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
-		frontEnd->offscreen_view->FillRect(BRect(x, y, x+w-1, y+h-1));
-	},
-
-	// draw_line
-	[](void *self, int x1, int y1, int x2, int y2, int colour)
+		startPoint.x -= textWidth;
+	}
+	else if (align & ALIGN_HCENTRE)
 	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+		startPoint.x -= textWidth / 2;
+	}
 
-		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
-		frontEnd->offscreen_view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
-	},
+	frontEnd->offscreen_view->SetFont(&font);
+	frontEnd->offscreen_view->DrawString(text, startPoint);
+}
 
-	// draw_polygon
-	[](void *self, const int *coords, int numPoints,
-			int fillColour, int strokeColour)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+void haiku_draw_rect(void *self, int x, int y, int w, int h, int colour)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-		BPoint points[numPoints] = {};
-		for (int i = 0; i < numPoints; ++i)
-			points[i] = BPoint(coords[i*2+0], coords[i*2+1]);
+	frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
+	frontEnd->offscreen_view->FillRect(BRect(x, y, x+w-1, y+h-1));
+}
 
-		if (fillColour >= 0) {
-			frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
-			frontEnd->offscreen_view->FillPolygon(points, numPoints);
-		}
+void haiku_draw_line(void *self, int x1, int y1, int x2, int y2, int colour)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
-		frontEnd->offscreen_view->StrokePolygon(points, numPoints);
-	},
+	frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(colour));
+	frontEnd->offscreen_view->StrokeLine(BPoint(x1, y1), BPoint(x2, y2));
+}
 
-	// draw_circle
-	[](void *self, int cx, int cy, int radius,
-			int fillColour, int strokeColour)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+void haiku_draw_polygon(void *self, const int *coords, int numPoints,
+	int fillColour, int strokeColour)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-		if (fillColour >= 0) {
-			frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
-			frontEnd->offscreen_view->FillEllipse(BPoint(cx, cy), radius, radius);
-		}
+	BPoint points[numPoints] = {};
+	for (int i = 0; i < numPoints; ++i)
+		points[i] = BPoint(coords[i*2+0], coords[i*2+1]);
 
-		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
-		frontEnd->offscreen_view->StrokeEllipse(BPoint(cx, cy), radius, radius);
-	},
+	if (fillColour >= 0) {
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
+		frontEnd->offscreen_view->FillPolygon(points, numPoints);
+	}
 
-	// draw_update
-	[](void *self, int x, int y, int w, int h)
-	{
+	frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
+	frontEnd->offscreen_view->StrokePolygon(points, numPoints);
+}
 
-	},
+void haiku_draw_circle(void *self, int cx, int cy, int radius,
+	int fillColour, int strokeColour)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-	// clip
-	[](void *self, int x, int y, int w, int h)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+	if (fillColour >= 0) {
+		frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(fillColour));
+		frontEnd->offscreen_view->FillEllipse(BPoint(cx, cy), radius, radius);
+	}
 
-		frontEnd->offscreen_view->ClipToRect(BRect(x, y, w+x, h+y));
-	},
+	frontEnd->offscreen_view->SetHighColor(frontEnd->get_colour(strokeColour));
+	frontEnd->offscreen_view->StrokeEllipse(BPoint(cx, cy), radius, radius);
+}
 
-	// unclip
-	[](void *self)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+void haiku_draw_update(void *self, int x, int y, int w, int h)
+{
 
-		frontEnd->offscreen_view->ConstrainClippingRegion(NULL);
-	},
+}
 
-	// start_draw
-	[](void *self)
-	{
+void haiku_clip(void *self, int x, int y, int w, int h)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-	},
+	frontEnd->offscreen_view->ClipToRect(BRect(x, y, w+x, h+y));
+}
 
-	// end_draw
-	[](void *self)
-	{
+void haiku_unclip(void *self)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
 
-	},
+	frontEnd->offscreen_view->ConstrainClippingRegion(NULL);
+}
 
-	// status_bar
-	[](void *self, const char *text)
-	{
-		frontend *frontEnd = static_cast<frontend*>(self);
+void haiku_start_draw(void *self)
+{
 
-		PuzzleView *view = static_cast<PuzzleView*>(frontEnd->view);
-		PuzzleWindow *window = static_cast<PuzzleWindow*>(view->Window());
+}
 
-		window->StatusBar()->SetText(text);
-	},
+void haiku_end_draw(void *self)
+{
 
-	NULL, // blitter_new
-	NULL, // blitter_free
-	NULL, // blitter_save
-	NULL, // blitter_load
-	// printing
-    NULL, NULL, NULL, NULL, NULL, NULL, /* {begin,end}_{doc,page,puzzle} */
-    NULL, NULL,			       /* line_width, line_dotted */
-    NULL,
-    NULL,
+}
+
+void haiku_status_bar(void *self, const char *text)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
+
+	PuzzleView *view = static_cast<PuzzleView*>(frontEnd->view);
+	PuzzleWindow *window = static_cast<PuzzleWindow*>(view->Window());
+
+	window->StatusBar()->SetText(text);
+}
+
+blitter* haiku_blitter_new(void *self, int w, int h)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
+
+	return new blitter(frontEnd->offscreen->Bounds(),
+		frontEnd->offscreen->ColorSpace());
+}
+
+void haiku_blitter_free(void *self, blitter *blitter)
+{
+	delete blitter->backing_store;
+	delete blitter;
+}
+
+void haiku_blitter_save(void *self, blitter *blitter, int x, int y)
+{
+	frontend *frontEnd = static_cast<frontend*>(self);
+
+	frontEnd->offscreen->LockBits();
+
+
+}
+
+void haiku_blitter_load(void *self, blitter *blitter, int x, int y)
+{
+
+}
+
+struct frontend haiku_api = {
+	haiku_draw_text,
+	haiku_draw_rect,
+	haiku_draw_line,
+	haiku_draw_polygon,
+	haiku_draw_circle,
+	haiku_draw_update,
+	haiku_clip,
+	haiku_unclip,
+	haiku_start_draw,
+	haiku_end_draw,
+	haiku_status_bar,
+	haiku_blitter_new,
+	haiku_blitter_free,
+	haiku_blitter_save,
+	haiku_blitter_load,
 };
-
 
 
 struct LockBitmap
